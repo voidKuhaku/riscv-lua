@@ -14,7 +14,10 @@ local Opcode = {
     JALR = 0x2F,
     LUI = 0x37,
     AUIPC = 0x17,
-    CONTROL_TRANSFER = 0x73
+    CONTROL_TRANSFER = 0x73,
+    LOAD_FP = 0x07,
+    STORE_FP = 0x27,
+    FLOAT_ARITHMETIC = 0x53
 }
 
 -- This table is to indexed like this:
@@ -432,6 +435,64 @@ local INSTRUCTIONS = {
                 end
             }
         }
+    },
+
+    [Opcode.LOAD_FP] = {
+        [0x2] = {
+            [0x0] = {
+                name = "flw",
+                exec = function(inst, cpu, memory)
+                    local addr = cpu.registers[inst.rs1] + numberUtils.i12ToI64(inst.imm)
+                    local word = memory:readWord(addr)
+                    local bytes = string.pack("<I4", word)
+                    local float = string.unpack("<f", bytes)
+                    cpu.fregisters[inst.rd] = float
+                end
+            }
+        }
+    },
+
+    [Opcode.STORE_FP] = {
+        [0x2] = {
+            [0x0] = {
+                name = "fsw",
+                exec = function(inst, cpu, memory)
+                    local addr = cpu.registers[inst.rs1] + numberUtils.i12ToI64(inst.imm)
+                    local bytes = string.pack("<f", cpu.fregisters[inst.rs2])
+                    local word = string.unpack("<I4", bytes)
+                    memory:writeWord(addr, word)
+                end
+            }
+        }
+    },
+
+    [Opcode.FLOAT_ARITHMETIC] = {
+        [0x0] = {
+            [0x00] = {
+                name = "fadd.s",
+                exec = function(inst, cpu)
+                    cpu.fregisters[inst.rd] = cpu.fregisters[inst.rs1] + cpu.fregisters[inst.rs2]
+                end
+            },
+            [0x04] = {
+                name = "fsub.s",
+                exec = function(inst, cpu)
+                    cpu.fregisters[inst.rd] = cpu.fregisters[inst.rs1] - cpu.fregisters[inst.rs2]
+                end
+            },
+            [0x08] = {
+                name = "fmul.s",
+                exec = function(inst, cpu)
+                    cpu.fregisters[inst.rd] = cpu.fregisters[inst.rs1] * cpu.fregisters[inst.rs2]
+                end
+            },
+            [0x0C] = {
+                name = "fdiv.s",
+                exec = function(inst, cpu)
+                    cpu.fregisters[inst.rd] = cpu.fregisters[inst.rs1] / cpu.fregisters[inst.rs2]
+                end
+            }
+        }
     }
 }
 
@@ -454,7 +515,11 @@ local INSTRUCTION_FORMATS = {
     [0x33] = "R",
     [0x63] = "B",
     [0x37] = "U",
-    [0x6F] = "J"
+    [0x6F] = "J",
+    [0x03] = "I",
+    [0x07] = "I",
+    [0x27] = "S",
+    [0x53] = "R"
 }
 
 local FORMAT_PARSERS = {
