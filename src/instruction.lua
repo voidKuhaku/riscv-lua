@@ -47,6 +47,22 @@ local INSTRUCTIONS = {
                 exec = function(inst, cpu)
                     cpu:writeReg(inst.rd, cpu.registers[inst.rs1] ~ cpu.registers[inst.rs2])
                 end
+            },
+            [0x1] = {
+                name = "div",
+                exec = function(inst, cpu)
+                    local dividend = numberUtils.i32ToI64(cpu.registers[inst.rs1])
+                    local divisor = numberUtils.i32ToI64(cpu.registers[inst.rs2])
+                    local result
+                    if divisor == 0 then
+                        result = -1
+                    elseif dividend == -0x80000000 and divisor == -1 then
+                        result = -0x80000000
+                    else
+                        result = dividend // divisor
+                    end
+                    cpu:writeReg(inst.rd, result)
+                end
             }
         },
         [0x6] = {
@@ -55,6 +71,21 @@ local INSTRUCTIONS = {
                 exec = function(inst, cpu)
                     cpu:writeReg(inst.rd, cpu.registers[inst.rs1] | cpu.registers[inst.rs2])
                 end
+            },
+            [0x1] = {
+                name = "rem",
+                exec = function(inst, cpu)
+                    local dividend = numberUtils.i32ToI64(cpu.registers[inst.rs1])
+                    local divisor = numberUtils.i32ToI64(cpu.registers[inst.rs2])
+                    local result
+                    if divisor == 0 then
+                        result = dividend
+                    else
+                        local quotient = dividend // divisor
+                        result = dividend - quotient * divisor
+                    end
+                    cpu:writeReg(inst.rd, result)
+                end
             }
         },
         [0x7] = {
@@ -62,6 +93,19 @@ local INSTRUCTIONS = {
                 name = "and",
                 exec = function(inst, cpu)
                     cpu:writeReg(inst.rd, cpu.registers[inst.rs1] & cpu.registers[inst.rs2])
+                end
+            },
+            [0x1] = {
+                name = "remu",
+                exec = function(inst, cpu)
+                    local divisor = cpu.registers[inst.rs2]
+                    local result
+                    if divisor == 0 then
+                        result = cpu.registers[inst.rs1]
+                    else
+                        result = cpu.registers[inst.rs1] % divisor
+                    end
+                    cpu:writeReg(inst.rd, result)
                 end
             }
         },
@@ -94,6 +138,19 @@ local INSTRUCTIONS = {
                 exec = function(inst, cpu)
                     local msb = cpu.registers[inst.rs1] & 0x80000000
                     cpu:writeReg(inst.rd, (cpu.registers[inst.rs1] >> cpu.registers[inst.rs2]) | msb)
+                end
+            },
+            [0x1] = {
+                name = "divu",
+                exec = function(inst, cpu)
+                    local divisor = cpu.registers[inst.rs2]
+                    local result
+                    if divisor == 0 then
+                        result = 0xFFFFFFFF
+                    else
+                        result = cpu.registers[inst.rs1] // divisor
+                    end
+                    cpu:writeReg(inst.rd, result)
                 end
             },
         },
